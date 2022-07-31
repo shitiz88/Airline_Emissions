@@ -1,0 +1,327 @@
+---
+title: "Quarter 3- Intership -CIE"
+author: "Shitiz"
+date: "01.05.2020"
+output:
+  word_document:
+    fig_height: 6
+    fig_width: 8tick
+  pdf_document: default
+  html_document:
+    fig_height: 6
+    fig_width: 8
+---
+*Alt + O to fold all chunks*
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+options(scipen = 999)
+```
+
+
+*Library*
+```{r}
+#library(olsrr)
+library(dplyr)
+library(ggplot2)
+library(data.table)
+library(tidyr)
+library(DescTools)
+library(tidyverse)
+```
+
+
+```{r}
+memory.limit()
+memory.limit(size=28000)
+```
+
+
+
+*Base data files from BTS website*
+*Selection of potential Required variables*
+*Change file location for running*
+```{r}
+#base date files from BTS for DB1B -Coupon and DB1B-  Ticket
+
+copq3p1 <- fread("C:/Users/schau/Desktop/Intership/New sample/copon/Origin_and_Destination_Survey_DB1BCoupon_2019_3/Origin_and_Destination_Survey_DB1BCoupon_2019_3.csv", header = T)
+copq3p1 <- copq3p1[copq3p1$OriginCountry == "US",]   #check for foreign origin country- zero records in database
+copq3p1 <- copq3p1[copq3p1$DestCountry == "US",]    #check for foreign destination country- zero records in database
+
+
+tikq3p1 <- fread("C:/Users/schau/Desktop/Intership/New sample/ticket/Origin_and_Destination_Survey_DB1BTicket_2019_3/Origin_and_Destination_Survey_DB1BTicket_2019_3.csv", header = T)
+tikq3p1 <- tikq3p1[tikq3p1$OriginCountry == "US",]   #check for foreign origin country- zero records in database. Only origin country in ticket
+
+#selection of variables
+copq3p2 <- copq3p1[, c( "ItinID"     ,        "MktID"     ,         "SeqNum"           ,  "Coupons", "OriginAirportID", "OriginCityMarketID", "Quarter"    ,        "Origin"   ,          "OriginCountry", "OriginState", "DestAirportID", "DestCityMarketID", "Dest"     ,          "DestCountry", "DestState", "Break"      ,        "CouponType","OpCarrier" , "RPCarrier" ,"Passengers", "FareClass"     ,     "Distance"       ,    "DistanceGroup")]
+
+tikq3p2 <- tikq3p1[, c("ItinID" , "Coupons"       ,     "Origin"      ,       "OriginAirportID", "OriginCityMarketID", "OriginCountry", "OriginState", "RoundTrip"      ,    "OnLine"      ,       "DollarCred"     ,    "FarePerMile"    ,    "RPCarrier", "Passengers"  ,       "ItinFare"      ,     "BulkFare"      ,     "Distance"       ,    "DistanceGroup"    ,  "MilesFlown"  )]
+
+
+
+rm(copq3p1) #clearing object for memory
+rm(tikq3p1) #clearing object for memory
+
+```
+
+
+
+*Combined Database for Coupon and Ticket database*
+*Change file location for running*
+```{r}
+
+
+combinedq3 <- merge(copq3p2,tikq3p2, by  = c("ItinID"))         #combining the two database
+
+q3 <- combinedq3[, c(1:23, 30:33, 36:37, 40)]      #further removing some variables
+
+
+rm(copq3p2) #clearing object for memory
+rm(tikq3p2) #clearing object for memory
+rm(combinedq3) #clearing object for memory
+```
+
+
+
+*Data Cleaning on combined database*
+*Change file location for running*
+```{r}
+
+
+q3 <- q3[q3$ItinFare >= 20, ]            # removing less than $20 tickets 10949357- 10265615 = 683742. 6.24% of total
+q3 <- q3[q3$ItinFare <= 9998, ]            # removing greater than $9998 tickets. removed = 77. 
+
+q3 <- q3[q3$BulkFare == 0]                 #removing Bulkfare = 1
+q3 <- q3[q3$DollarCred == 1]               #removing Dollarcred = 0. Removed 23631. remaining = 10241907  
+
+q3[q3$FarePerMile == 0] <- NA              #removing fare per mile = 0 values
+q3 <- q3[complete.cases(q3$FarePerMile),]
+
+q3 <- q3[q3$Coupons.x  <5,]       #by removing coupons above 4, we had a reduction of 476934 rows, amounting to 4.66% reduction
+
+q3 <- q3[!(q3$RoundTrip == 0 & q3$Coupons.x >2), ] #by removing coupons above 2 for one way trip, we had a reduction of 273765 rows, amounting to 2.80% reduction
+
+#changing and cleaning Fare Class variable 
+q3$FareClass <- gsub(".*C.*", "Unrest. Bus", q3$FareClass)
+q3$FareClass <- gsub(".*D.*", "Rest. Bus", q3$FareClass)
+q3$FareClass <- gsub(".*F.*", "Unrest. 1st", q3$FareClass)
+q3$FareClass <- gsub(".*G.*", "Rest. 1st", q3$FareClass)
+q3$FareClass <- gsub(".*X.*", "Rest. Econ", q3$FareClass)
+q3$FareClass <- gsub(".*Y.*", "Unrest. Econ", q3$FareClass)
+q3 <- q3[q3$FareClass != ""]
+q3 <- q3[q3$FareClass != "U"]
+
+q3$FareClass <- factor(q3$FareClass, levels = c("Rest. Econ", "Unrest. Econ", "Rest. Bus", "Unrest. Bus", "Rest. 1st", "Unrest. 1st"))
+
+
+#fwrite(q3, file = "q3a.csv") #remove from final
+
+#combining Different classes 
+q3$FareClass <- gsub("Rest. Econ|Unrest. Econ", "Economy", q3$FareClass)
+q3$FareClass <- gsub("Rest. Bus|Unrest. Bus", "Premium", q3$FareClass)
+q3$FareClass <- gsub("Rest. 1st|Unrest. 1st", "First", q3$FareClass)
+
+
+#column name change
+names(q3)[8] <- 'Origin'
+names(q3)[13] <- 'Destination'
+names(q3)[18] <- 'OperatingCarrier'
+
+
+#removing First Class
+q3$FareClass <- gsub("First", NA, q3$FareClass)
+q3 <- q3[complete.cases(q3$FareClass), ] 
+
+```
+
+
+
+
+*Sorting by combinations*
+
+```{r}
+#rm(q3)
+
+#rm(list=ls())
+# q3v1 <- fread("C:/Users/schau/Desktop/Intership/June 2021/q3v1.csv", header = T)
+# df1 <- read_csv("q3v1.csv")
+q3v1 <- q3
+#Passengers and fares for routes grouped by Origin, Destination, Operating Carrier and Fare Class
+routes1 <- q3v1 %>% group_by(Origin, Destination, OperatingCarrier,FareClass) %>% summarise(TotalPassengers = sum(Passengers.x), MeanFPM = mean(FarePerMile))
+
+routes1 <- routes1[routes1$TotalPassengers >=100,] #removing route combinations with less than 100 passengers 
+routes1 <- routes1 %>% group_by(Origin, Destination, OperatingCarrier) %>% filter(n() == 2) #removing single fare class route combinations
+
+q3v2 <- as.data.frame(semi_join(q3v1, routes1, by = c("Origin", "Destination", "OperatingCarrier", "FareClass"))) #full sample with only the filtered route combinations
+
+
+```
+
+*quantiles*
+
+## getting quantiles
+
+
+```{r}
+# orig_dest_carr_q3
+
+#get all the combos for origins, destinations, and operating carriers
+q3v3 <- unique(q3v2[,c("Origin", "Destination", "OperatingCarrier")])
+orig_dest_carr_q3 <- with(q3v3, q3v3[order(q3v3$Origin, q3v3$Destination), ])  #alphabetical order
+
+#set the tracer
+k=1
+
+#Loop over all the combos to get the quantiles and cbind each subsequently
+for (i in 1:nrow(orig_dest_carr_q3)){
+  
+  #initialise origin, destination, and carrier
+  origin = orig_dest_carr_q3[i,1]
+  destination = orig_dest_carr_q3[i,2]
+  carrier = orig_dest_carr_q3[i,3]
+  q3v4 <- q3v2 %>% filter(Origin == origin & Destination == destination & OperatingCarrier == carrier)
+  if(k == 1){
+    q3_final1 <- cbind(
+      as.data.frame(quantile(q3v4[q3v4$FareClass == "Economy", ]$FarePerMile ,
+                             probs=seq(0.001, 1, by=0.001),
+                             na.rm=TRUE),
+                    include.lowest=TRUE), 
+      as.data.frame(quantile(q3v4[q3v4$FareClass == "Premium", ]$FarePerMile, 
+                             probs=seq(0.001, 1, by=0.001),
+                             na.rm=TRUE), include.lowest=TRUE),
+      as.data.frame(quantile(q3v4$FarePerMile ,
+                             probs=seq(0.001, 1, by=0.001), na.rm=TRUE),
+                    include.lowest=TRUE))
+    
+    names(q3_final1)[1] <- paste(origin, destination, carrier, "E", sep = "_")
+    names(q3_final1)[2] <- paste(origin, destination, carrier, "P", sep = "_")
+    names(q3_final1)[3] <- paste(origin, destination, carrier, "All", sep = "_")
+    k = k+1
+    # x <-paste(i, j, m, "E", sep = "_")
+  }
+  else {
+    
+    q3_final2 <- cbind(
+      as.data.frame(quantile(q3v4[q3v4$FareClass == "Economy", ]$FarePerMile ,
+                             probs=seq(0.001, 1, by=0.001),
+                             na.rm=TRUE),
+                    include.lowest=TRUE), 
+      as.data.frame(quantile(q3v4[q3v4$FareClass == "Premium", ]$FarePerMile, 
+                             probs=seq(0.001, 1, by=0.001),
+                             na.rm=TRUE), include.lowest=TRUE),
+      as.data.frame(quantile(q3v4$FarePerMile ,
+                             probs=seq(0.001, 1, by=0.001), na.rm=TRUE),
+                    include.lowest=TRUE))
+    
+    names(q3_final2)[1] <- paste(origin, destination, carrier, "E", sep = "_")
+    names(q3_final2)[2] <- paste(origin, destination, carrier, "P", sep = "_")
+    names(q3_final2)[3] <- paste(origin, destination, carrier, "All", sep = "_")
+    
+    q3_final1 <- cbind(q3_final1,q3_final2)
+    k=k+1
+  }
+  # paste(final)
+  #for testing purposes
+  # if (k ==4){
+  # break
+  # }
+}
+
+```
+
+
+## mean values
+```{r}
+#set the tracer
+j=1
+
+
+#Loop over all the combos to get the means and cbind each subsequently
+for (i in 1:nrow(orig_dest_carr_q3)){
+  
+  #initialise origin, destination, and carrier
+  origin = orig_dest_carr_q3[i,1]
+  destination = orig_dest_carr_q3[i,2]
+  carrier = orig_dest_carr_q3[i,3]
+  q3v5 <- q3v2 %>% filter(Origin == origin & Destination == destination & OperatingCarrier == carrier)
+  if(j == 1){
+    q3_final3 <- cbind(
+      as.data.frame(mean(q3v5$FarePerMile[q3v5$FareClass == "Economy"])), 
+      as.data.frame(mean(q3v5$FarePerMile[q3v5$FareClass == "Premium"])),
+      as.data.frame(mean(q3v5$FarePerMile))
+      )
+    
+    names(q3_final3)[1] <- paste(origin, destination, carrier, "E", sep = "_")
+    names(q3_final3)[2] <- paste(origin, destination, carrier, "P", sep = "_")
+    names(q3_final3)[3] <- paste(origin, destination, carrier, "All", sep = "_")
+    j = j+1
+    # x <-paste(i, j, m, "E", sep = "_")
+  }
+  else {
+    
+    q3_final4 <- cbind(
+      as.data.frame(mean(q3v5$FarePerMile[q3v5$FareClass == "Economy"])), 
+      as.data.frame(mean(q3v5$FarePerMile[q3v5$FareClass == "Premium"])),
+      as.data.frame(mean(q3v5$FarePerMile))
+      )
+    
+    names(q3_final4)[1] <- paste(origin, destination, carrier, "E", sep = "_")
+    names(q3_final4)[2] <- paste(origin, destination, carrier, "P", sep = "_")
+    names(q3_final4)[3] <- paste(origin, destination, carrier, "All", sep = "_")
+    
+    q3_final3 <- cbind(q3_final3,q3_final4)
+    j=j+1
+  }
+  # paste(final)
+  #for testing purposes
+  # if (j ==4){
+  # break
+  # }
+}
+
+```
+
+## combining the two tables and normalizing
+```{r}
+
+rownames(q3_final3) <- "mean"
+q3v6 <- rbind(q3_final3, q3_final1)
+
+library(stringr)
+q3_norm <- q3v6 %>%
+    summarise(across(everything(),
+       ~ .[-1]/get(str_replace(cur_column(), '[^_]+$', 'All'))[1]))
+
+
+q3_norm$percentile <- seq(0.001, 1, by=0.001) 
+q3_norm$percentile <- sprintf("%1.2f%%", 100*q3_norm$percentile) 
+
+q3_norm <- q3_norm %>%
+  select(percentile, everything())
+
+fwrite(q3_norm, file = "q3_Final_June2021.csv")
+
+```
+
+## END
+
+```{r}
+#qabc <- seq(0.0000, 1, by=0.001)
+#qabc <- sprintf("%1.2f%%", 100*qabc)
+
+
+#abc <- q3_final3
+#rownames(abc) <- "mean"
+#rm(abc)
+
+#routes2 <- q3v2 %>% group_by(Origin, Destination, OperatingCarrier) %>% summarise(MeanFPM = mean(FarePerMile))
+#routes2$CombinedCOl <- paste(routes2$Origin, routes2$Destination, routes2$OperatingCarrier, "All", sep = "_")
+#routes3 <- subset(routes2, select = c("CombinedCOl", "MeanFPM"))
+#routes4 <- as.data.frame(t(routes3))
+#abc <- read.csv("sampl2.csv")
+#names(abc)[1] <- "NYC_LAX_AA_E"
+
+#abc %>%
+    #summarise(across(everything(),
+       #~ .[-1]/get(str_replace(cur_column(), '[^_]+$', 'All'))[1]))
+```
+
