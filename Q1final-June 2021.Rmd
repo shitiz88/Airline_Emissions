@@ -1,6 +1,6 @@
 ---
 title: "Quarter 1- Intership -CIE"
-author: "Shitiz"
+author: "Shitiz Chaudhary"
 date: "01.05.2020"
 output:
   word_document:
