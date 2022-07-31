@@ -1,5 +1,5 @@
 ---
-title: "Quarter 2- Intership -CIE"
+title: "Quarter 2- Airline Emissions"
 author: "Shitiz"
 date: "01.05.2020"
 output:
@@ -36,18 +36,17 @@ memory.limit(size=28000)
 ```
 
 
-
 *Base data files from BTS website*
 *Selection of potential Required variables*
 *Change file location for running*
 ```{r}
 #base date files from BTS for DB1B -Coupon and DB1B-  Ticket
 
-copq2p1 <- fread("C:/Users/schau/Desktop/Intership/New sample/copon/Origin_and_Destination_Survey_DB1BCoupon_2019_2/Origin_and_Destination_Survey_DB1BCoupon_2019_2.csv", header = T)
+copq2p1 <- fread("C:/Users/schau/Desktop/Intership/New sample/copon/Origin_and_Destination_Survey_DB1BCoupon_2019_2/Origin_and_Destination_Survey_DB1BCoupon_2019_2.csv", header = T) #change location for your system
 copq2p1 <- copq2p1[copq2p1$OriginCountry == "US",]   #check for foreign origin country- zero records in database
 copq2p1 <- copq2p1[copq2p1$DestCountry == "US",]    #check for foreign destination country- zero records in database
 
-tikq2p1 <- fread("C:/Users/schau/Desktop/Intership/New sample/ticket/Origin_and_Destination_Survey_DB1BTicket_2019_2/Origin_and_Destination_Survey_DB1BTicket_2019_2.csv", header = T)
+tikq2p1 <- fread("C:/Users/schau/Desktop/Intership/New sample/ticket/Origin_and_Destination_Survey_DB1BTicket_2019_2/Origin_and_Destination_Survey_DB1BTicket_2019_2.csv", header = T) #change location for your system
 tikq2p1 <- tikq2p1[tikq2p1$OriginCountry == "US",]   #check for foreign origin country- zero records in database. Only origin country in ticket
 
 #selection of variables

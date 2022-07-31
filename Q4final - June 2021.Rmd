@@ -1,5 +1,5 @@
 ---
-title: "Quarter 4- Intership -CIE"
+title: "Quarter 4- Airline Emissions"
 author: "Shitiz"
 date: "01.05.2020"
 output:
@@ -16,7 +16,6 @@ output:
 knitr::opts_chunk$set(echo = FALSE)
 options(scipen = 999)
 ```
-
 
 *Library*
 
@@ -43,12 +42,12 @@ memory.limit(size=28000)
 ```{r}
 #base date files from BTS for DB1B -Coupon and DB1B-  Ticket
 
-copq4p1 <- fread("C:/Users/schau/Desktop/Intership/New sample/copon/Origin_and_Destination_Survey_DB1BCoupon_2019_4/Origin_and_Destination_Survey_DB1BCoupon_2019_4.csv", header = T)
+copq4p1 <- fread("C:/Users/schau/Desktop/Intership/New sample/copon/Origin_and_Destination_Survey_DB1BCoupon_2019_4/Origin_and_Destination_Survey_DB1BCoupon_2019_4.csv", header = T) #change location for your system
 copq4p1 <- copq4p1[copq4p1$OriginCountry == "US",]   #check for foreign origin country- zero records in database
 copq4p1 <- copq4p1[copq4p1$DestCountry == "US",]    #check for foreign destination country- zero records in database
 
 
-tikq4p1 <- fread("C:/Users/schau/Desktop/Intership/New sample/ticket/Origin_and_Destination_Survey_DB1BTicket_2019_4/Origin_and_Destination_Survey_DB1BTicket_2019_4.csv", header = T)
+tikq4p1 <- fread("C:/Users/schau/Desktop/Intership/New sample/ticket/Origin_and_Destination_Survey_DB1BTicket_2019_4/Origin_and_Destination_Survey_DB1BTicket_2019_4.csv", header = T) #change location for your system
 tikq4p1 <- tikq4p1[tikq4p1$OriginCountry == "US",]   #check for foreign origin country- zero records in database. Only origin country in ticket
 
 
